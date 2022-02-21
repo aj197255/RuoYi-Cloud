@@ -1,0 +1,270 @@
+# RUOYI-CLOUD deploy
+
+## 一 基础配置
+
+代码 git clone
+
+idea 打开 配置 jdk maven Compiler File Encodings Languagelevel
+
+### mistake
+
+Error:(222, 57) java: -source 1.5 中不支持方法引用
+  (请使用 -source 8 或更高版本以启用方法引用)
+
+打开Project Structure -> Modules -> Language level ->看是否为 8
+
+配置好按右纵菜单栏maven 刷新按钮
+
+点击启动运行 下菜单栏Services会自动出现（没有打开redis nacos nodejs 会报错）
+
+## 二 数据库 
+
+net start mysql 启动数据库
+
+### create
+
+创建ry-cloud数据库 执行quartz.sql 和 ry_2021xxxxx.sql  sql语句
+
+执行 ry_config_xxx.sql 和 ry_seata_xxx.sql  sql语句 会自动创建 ry-config 和 ry-seata 数据库
+
+### connection
+
+输入 用户名 密码 数据库 即可 
+
+测试连接 点击报错信息的 Set time zone
+
+跳转Advanced 下的 serverTimezone  时区为 UTC  应用 OK 即可连接
+
+## 三 redis
+
+安装与配置参考网上的 搜索“redis 安装”  选择菜鸟教程
+
+启动命令  进入redis目录 cmd 输入即可启动
+
+```d
+redis-server.exe redis.windows.conf
+```
+
+在上一个 cmd未关闭的情况下在启动一个 cmd  执行命令
+
+```
+redis-cli.exe -h 127.0.0.1 -p 6379
+```
+
+```
+set myKey abc
+```
+
+```
+get myKey
+```
+
+停止redis命令
+
+```
+redis-cli shutdown
+```
+
+## 四 nodejs npm
+
+检查安装情况 node -v  和 npm -v   ( 对DOS窗口没有要求 )
+
+若有一失败 修复或重安装或百度解决 
+
+进入 ruoyi-cloud 的 ruoyi-ui （cd ruoyi-ui）
+
+安装依赖 npm install
+
+继续执行 npm install --registry=https://registry.npm.taobao.org
+
+启动项目命令 npm run dev   自动跳转浏览器		
+
+### mistake
+
+#### 1,
+
+出错可以尝试以下方法：
+
+首先确定自己使用的包的下载源是国内的（可以通过`npm config list`查看自己包的下载源，如果是默认官方的话，建议改成国内的，**方法**：`npm config set registry https://registry.npm.taobao.org`）
+
+然后，使用`npm cache clean --force`清除缓存，并将安装失败的项目中的**node_modules文件夹**删除，重新`npm install`
+
+#### 2,
+
+ERESOLVE unable to resolve dependency tree
+
+原因是npm 版本过高
+
+1.降级到npm6.x
+2.`npm i --legacy-peer-deps`
+
+## 五 nacos
+
+### modification
+
+bin目录下 startup  set MODE="xxxx"  修改为单机模式  set MODE="standalone"
+
+conf 目录下 application.properties 添加下面内容（要仔细）
+
+#db mysql
+spring.datasource.platform=mysql
+db.num=1
+db.url=jdbc:mysql://127.0.0.1:3306/ry-config?characterEncoding=utf8&connectTimeout=1000&socketTimeout=3000&autoReconnect=true&useUnicode=true&useSSL=false&serverTimezone=UTC
+db.user=root
+db.password=root
+
+### start
+
+单机模式最好不要双击 bin 下的 startup启动
+
+如果出现闪退情况 检查jdk环境变量有问题 查看并修改
+
+在bin 下 cmd   输入 startup.cmd -m standalone
+
+如果启动有问题 说明 上面添加的 内容有 问题 （仔细检查）
+
+启动成功后 http://localhost:8848/nacos  进入注册中心进行配置内容
+
+配置管理-配置列表显示 数据
+
+## 六 注册中心进行数据修改 启动
+
+idea 下面一栏 Services 进行全局启动  加号添加 Spring Boot
+
+首次可以 启动成功三个
+
+![在这里插入图片描述](https://img-blog.csdnimg.cn/20210508114131254.png)
+
+接下来对其他配置内容进行修改  主要是因为数据库问题（不要瞎改）
+
+ 上面的每个配置文件都打开检查下，涉及数据库的IP、密码和redis 的IP和密码，都要换成自己的（本地的话就127.0.0.1）
+
+上面的每个配置文件都打开检查下，涉及数据库的IP、密码和redis 的IP和密码，都要换成自己的（本地的话就127.0.0.1）
+
+## 七 Sentinel
+
+和jar同级目录下，打开cmd窗口；然后，执行下述命令；
+
+ java -jar sentinel-dashbord-1.8.2.jar
+
+若想以指定端口运行，怎在运行时，加入端口参数
+
+启动命令：java -Dserver.port=8718 -jar sentinel-dashboard-1.8.2.jar
+
+打开浏览器，输入http://localhost:8718/
+用户名和密码都是 sentinel
+
+## 八 问题 
+
+###  若依服务状态监控 （Admin控制台）
+
+账号：ruoyi
+
+密码：123456
+
+### 登录页面问题
+
+出现验证图片未显示 是因为 注册中心未准备好 
+
+准备好后刷新即可
+
+### 登录出现问题
+
+获取用户失败:[503] during [GET] to [http://ruoyi-system/user/info/admin] [RemoteUserService#getUserInfo(String)]: [Load balancer does not contain an instance for the service ruoyi-system]
+
+### 启动RuoYiSystemApplication出现的问题
+
+19:34:00.629 [main] WARN  c.b.d.d.DynamicRoutingDataSource - [afterPropertiesSet,240] - dynamic-datasource initial loaded [0] datasource,Please add your primary datasource or check your configuration
+
+Caused by: org.apache.ibatis.type.TypeException: Could not resolve type alias 'SysConfig'.  Cause: java.lang.ClassNotFoundException: Cannot find class: SysConfig
+
+nacos 注册中心 配置出现问题
+
+ruoyi-cloud nacos 配置管理 配置列表 duoyi-system-dev.yml 配置内容如下
+
+```yaml
+# spring配置
+spring: 
+  redis:
+    host: localhost
+    port: 6379
+    password: 
+  datasource:
+    druid:
+      stat-view-servlet:
+        enabled: true
+        loginUsername: admin
+        loginPassword: 123456
+    dynamic:
+      druid:
+        initial-size: 5
+        min-idle: 5
+        maxActive: 20
+        maxWait: 60000
+        timeBetweenEvictionRunsMillis: 60000
+        minEvictableIdleTimeMillis: 300000
+        validationQuery: SELECT 1 FROM DUAL
+        testWhileIdle: true
+        testOnBorrow: false
+        testOnReturn: false
+        poolPreparedStatements: true
+        maxPoolPreparedStatementPerConnectionSize: 20
+        filters: stat,slf4j
+        connectionProperties: druid.stat.mergeSql\=true;druid.stat.slowSqlMillis\=5000
+      datasource:
+          # 主库数据源
+          master:
+            driver-class-name: com.mysql.cj.jdbc.Driver
+            url: jdbc:mysql://localhost:3306/ry-cloud?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=true&serverTimezone=GMT%2B8
+            username: root
+            password: root
+          # 从库数据源
+          # slave:
+            # username: 
+            # password: 
+            # url: 
+            # driver-class-name: 
+      # seata: true    # 开启seata代理，开启后默认每个数据源都代理，如果某个不需要代理可单独关闭
+
+# seata配置
+seata:
+  # 默认关闭，如需启用spring.datasource.dynami.seata需要同时开启
+  enabled: false
+  # Seata 应用编号，默认为 ${spring.application.name}
+  application-id: ${spring.application.name}
+  # Seata 事务组编号，用于 TC 集群名
+  tx-service-group: ${spring.application.name}-group
+  # 关闭自动代理
+  enable-auto-data-source-proxy: false
+  # 服务配置项
+  service:
+    # 虚拟组和分组的映射
+    vgroup-mapping:
+      ruoyi-system-group: default
+  config:
+    type: nacos
+    nacos:
+      serverAddr: 127.0.0.1:8848
+      group: SEATA_GROUP
+      namespace:
+  registry:
+    type: nacos
+    nacos:
+      application: seata-server
+      server-addr: 127.0.0.1:8848
+      namespace:
+
+# mybatis配置
+mybatis:
+    # 搜索指定包别名
+    typeAliasesPackage: com.ruoyi.system
+    # 配置mapper的扫描，找到所有的mapper.xml映射文件
+    mapperLocations: classpath:mapper/**/*.xml
+
+# swagger配置
+swagger:
+  title: 系统模块接口文档
+  license: Powered By ruoyi
+  licenseUrl: https://ruoyi.vip
+```
+
